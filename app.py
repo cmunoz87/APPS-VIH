@@ -93,13 +93,13 @@ with st.form("form_vih"):
         st.session_state["usuario_sin_run"] = st.checkbox(
             "Usuario sin RUN",
             value=st.session_state["usuario_sin_run"],
-            help="Si se marca, el código terminará en 'ABC-D' (literal fijo).",
+            help="Aplica principalmente a los Usuarios Extrajeros,que no tienen RUN emitido por el Servicio de Registro Civil e Identificación.",
         )
     with cr_left:
         st.session_state["rut"] = st.text_input(
             "RUN (con o sin puntos, con guion)",
             value=st.session_state["rut"],
-            placeholder="16.823.628-K",
+            placeholder="12345678-9",
             disabled=st.session_state["usuario_sin_run"]
         ).strip()
 
