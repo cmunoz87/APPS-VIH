@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 from utils import (
     generar_codigo_vih,
@@ -19,28 +20,15 @@ defaults = {
 for k, v in defaults.items():
     st.session_state.setdefault(k, v)
 
-# ---- Callbacks ----
-def on_toggle_sin_segundo():
-    if st.session_state.get("sin_segundo_apellido", False):
-        st.session_state["segundo_apellido"] = ""
-
-def on_toggle_sin_run():
-    if st.session_state.get("usuario_sin_run", False):
-        st.session_state["rut"] = ""
-
-def format_fecha_input():
-    """Inserta guiones automáticamente en la fecha: 28032025 -> 28-03-2025"""
-    raw = st.session_state.get("fecha_nac", "") or ""
-    digits = "".join(ch for ch in raw if ch.isdigit())
-    if len(digits) > 8:
-        digits = digits[:8]
-    if len(digits) >= 5:
-        new = f"{digits[:2]}-{digits[2:4]}-{digits[4:8]}"
-    elif len(digits) >= 3:
-        new = f"{digits[:2]}-{digits[2:4]}"
+# ---- Utilidad: autoguiones de fecha al enviar ----
+def auto_guiones_fecha(raw: str) -> str:
+    digits = re.sub(r"\D", "", raw or "")
+    if len(digits) >= 8:
+        return f"{digits[:2]}-{digits[2:4]}-{digits[4:8]}"
+    elif len(digits) >= 4:
+        return f"{digits[:2]}-{digits[2:4]}"
     else:
-        new = digits
-    st.session_state["fecha_nac"] = new
+        return digits
 
 # ---- Encabezado con logos ----
 col1, col2 = st.columns([1, 1])
@@ -56,7 +44,7 @@ st.markdown(
 st.markdown(
     """
     <div style="text-align:center; color:#555; font-size:0.95rem;">
-      Ingrese los datos exactamente como se solicita. La fecha debe ser <b>DD-MM-AAAA</b> (solo dígitos y guiones).
+      Ingrese los datos exactamente como se solicita.
     </div>
     """,
     unsafe_allow_html=True
@@ -65,52 +53,55 @@ st.markdown(
 # ---- Formulario ----
 with st.form("form_vih"):
     # Fila: Primer nombre
-    primer_nombre = st.text_input("Primer nombre", key="primer_nombre").strip()
+    st.session_state["primer_nombre"] = st.text_input(
+        "Primer nombre",
+        value=st.session_state["primer_nombre"]
+    ).strip()
 
     # Fila: Primer apellido
-    primer_apellido = st.text_input("Primer apellido", key="primer_apellido").strip()
+    st.session_state["primer_apellido"] = st.text_input(
+        "Primer apellido",
+        value=st.session_state["primer_apellido"]
+    ).strip()
 
     # Fila: Segundo apellido + checkbox a la derecha
     c_left, c_right = st.columns([3, 1])
-    with c_left:
-        segundo_apellido = st.text_input(
-            "Segundo apellido",
-            key="segundo_apellido",
-            disabled=st.session_state.get("sin_segundo_apellido", False)
-        ).strip()
     with c_right:
-        st.checkbox(
+        st.session_state["sin_segundo_apellido"] = st.checkbox(
             "No tiene segundo apellido",
-            key="sin_segundo_apellido",
-            on_change=on_toggle_sin_segundo
+            value=st.session_state["sin_segundo_apellido"]
         )
+    with c_left:
+        st.session_state["segundo_apellido"] = st.text_input(
+            "Segundo apellido",
+            value=st.session_state["segundo_apellido"],
+            disabled=st.session_state["sin_segundo_apellido"]
+        ).strip()
 
-    # Fecha con autoguiones
-    fecha_nac = st.text_input(
+    # Fecha (los guiones se agregan automáticamente al enviar)
+    st.session_state["fecha_nac"] = st.text_input(
         "Fecha de nacimiento (DD-MM-AAAA)",
+        value=st.session_state["fecha_nac"],
         placeholder="28-03-2025",
-        key="fecha_nac",
-        on_change=format_fecha_input
     ).strip()
 
     st.markdown("---")
 
     # RUN a la izquierda y casilla "Usuario sin RUN" a la derecha
     cr_left, cr_right = st.columns([2, 1])
-    with cr_left:
-        rut = st.text_input(
-            "RUN (con o sin puntos, con guion)",
-            placeholder="16.823.628-K",
-            key="rut",
-            disabled=st.session_state.get("usuario_sin_run", False)
-        ).strip()
     with cr_right:
-        st.checkbox(
+        st.session_state["usuario_sin_run"] = st.checkbox(
             "Usuario sin RUN",
-            key="usuario_sin_run",
-            help=" Aplica a Usuarios pricipalmente extrajeros que no tienen RUN emitido por el resgistro civil.",
-            on_change=on_toggle_sin_run
+            value=st.session_state["usuario_sin_run"],
+            help="Si se marca, el código terminará en 'ABC-D' (literal fijo).",
         )
+    with cr_left:
+        st.session_state["rut"] = st.text_input(
+            "RUN (con o sin puntos, con guion)",
+            value=st.session_state["rut"],
+            placeholder="16.823.628-K",
+            disabled=st.session_state["usuario_sin_run"]
+        ).strip()
 
     # Botones: Generar y Restablecer
     b1, b2 = st.columns([1, 1])
@@ -124,6 +115,13 @@ if reset_clicked:
     st.rerun()
 
 if submitted:
+    # Forzar reglas post-envío dentro de la forma:
+    if st.session_state["sin_segundo_apellido"]:
+        st.session_state["segundo_apellido"] = ""
+
+    # Auto-insertar guiones en fecha si vienen sin guiones
+    st.session_state["fecha_nac"] = auto_guiones_fecha(st.session_state["fecha_nac"])
+
     # Validaciones mínimas
     if not st.session_state["primer_nombre"] or not st.session_state["primer_apellido"] or (
         not st.session_state["sin_segundo_apellido"] and not st.session_state["segundo_apellido"]
@@ -171,3 +169,4 @@ st.markdown(
     "</p>",
     unsafe_allow_html=True
 )
+
