@@ -179,33 +179,53 @@ if pagina == "Verificador Código VIH":
     )
 
 # =============================================================================
-# Página 2: Flujo de Interpretación VIH
+# Página 2: Flujo de Interpretación VIH (sin valores precargados)
 # =============================================================================
 else:
     header("🧬 Flujo de Interpretación de Resultados VIH")
 
     # Botón de reinicio solo para esta página
     if st.button("🔄 Reiniciar flujo"):
-        for key in ["resultado_inicial", "repeticion1", "repeticion2", "confirmacion_isp", "prueba_identidad"]:
+        for key in [
+            "resultado_inicial_str", "repeticion1_str", "repeticion2_str",
+            "confirmacion_isp", "prueba_identidad_str"
+        ]:
             if key in st.session_state:
                 del st.session_state[key]
         st.rerun()
 
     st.write("Ingrese el resultado inicial para iniciar el flujo de interpretación.")
 
-    # Paso 1: Resultado cuantitativo inicial
-    resultado_inicial = st.number_input("Resultado cuantitativo inicial", min_value=0.0, step=0.01, key="resultado_inicial")
+    # Utilidad: parsear números desde un text_input (permite punto o coma)
+    def get_float_from_text(label: str, key: str):
+        s = st.text_input(label, value=st.session_state.get(key, ""), key=key, placeholder="").strip()
+        if s == "":
+            return None
+        s2 = s.replace(",", ".")
+        try:
+            return float(s2)
+        except ValueError:
+            st.error(f"“{label}” debe ser numérico. Use punto o coma para decimales.")
+            return None
 
-    if resultado_inicial < 1:
+    # Paso 1: Resultado cuantitativo inicial (en blanco por defecto)
+    resultado_inicial = get_float_from_text("Resultado cuantitativo inicial", "resultado_inicial_str")
+
+    if resultado_inicial is None:
+        st.info("Ingrese el resultado inicial para continuar.")
+    elif resultado_inicial < 1:
         st.success("Resultado cuantitativo: NO REACTIVO ✅. SE EMITE INFORME.")
     else:
         st.warning("Resultado inicial REACTIVO ⚠️. Ingrese las repeticiones:")
-        # Paso 2: Repeticiones
-        repeticion1 = st.number_input("Repetición 1", min_value=0.0, step=0.01, key="repeticion1")
-        repeticion2 = st.number_input("Repetición 2", min_value=0.0, step=0.01, key="repeticion2")
 
-        # Evaluación de repeticiones solo cuando las ingresen
-        if (repeticion1 is not None and repeticion2 is not None) and (repeticion1 > 0 or repeticion2 > 0):
+        # Paso 2: Repeticiones (también en blanco por defecto)
+        repeticion1 = get_float_from_text("Repetición 1", "repeticion1_str")
+        repeticion2 = get_float_from_text("Repetición 2", "repeticion2_str")
+
+        # Avanzar solo cuando hay datos numéricos en ambas repeticiones
+        if (repeticion1 is None) or (repeticion2 is None):
+            st.info("Ingrese ambas repeticiones para evaluar el resultado cualitativo.")
+        else:
             if repeticion1 < 1 and repeticion2 < 1:
                 st.success("Resultado cualitativo: NO REACTIVO ✅. SE EMITE INFORME.")
             else:
@@ -223,13 +243,13 @@ else:
                     st.success("Confirmación ISP: NEGATIVO ✅. SE EMITE INFORME.")
                 elif confirmacion_isp == "Positivo":
                     st.warning("Confirmación ISP: POSITIVO ⚠️. Requiere prueba de identidad.")
-                    # Paso 4: Prueba de identidad
-                    prueba_identidad = st.number_input(
-                        "Resultado prueba de identidad",
-                        min_value=0.0, step=0.01, key="prueba_identidad"
-                    )
 
-                    if prueba_identidad > 0:
+                    # Paso 4: Prueba de identidad (en blanco por defecto)
+                    prueba_identidad = get_float_from_text("Resultado prueba de identidad", "prueba_identidad_str")
+
+                    if prueba_identidad is None:
+                        st.info("Ingrese el valor de la prueba de identidad para continuar.")
+                    else:
                         if prueba_identidad < 1:
                             st.warning("Resultado prueba de identidad: NO REACTIVO ⚠️. Revisar proceso, no emitir informe.")
                         else:
