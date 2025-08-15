@@ -194,7 +194,7 @@ else:
                 del st.session_state[key]
         st.rerun()
 
-    st.write("Ingrese el resultado cuantitativo inicial, separado por '.' en caso de tener decimales,  para iniciar el flujo de interpretación.")
+    st.write("Ingrese el resultado cuantitativo inicial,  para iniciar el flujo de interpretación.")
 
     # Utilidad: parsear números desde un text_input (permite punto o coma)
     def get_float_from_text(label: str, key: str):
