@@ -41,7 +41,7 @@ if pagina == "Verificador Código VIH":
     st.markdown(
         """
         <div style="text-align:center; color:#555; font-size:0.95rem;">
-          Ingrese los datos exactamente como se solicita. La fecha debe ser <b>DD-MM-AAAA</b> (solo dígitos y guiones).
+          Ingrese los datos exactamente como se solicita.
         </div>
         """,
         unsafe_allow_html=True
